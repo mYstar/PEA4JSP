@@ -10,6 +10,7 @@ from JSPEval.jspmodel import JspModel
 from JSPEval.jspeval import JspEvaluator
 import params
 import operators
+import output
 
 
 class NSGA2(object):
@@ -98,25 +99,20 @@ class NSGA2(object):
                 offspring,
                 len(population))
 
-        return tools.sortNondominated(population, 500, True)
+        return population
 
 if __name__ == '__main__':
     gen, pop, f_model = params.get()
 
     alg = NSGA2(f_model)
-    pareto_front = alg.optimize(gen, pop)
+    population = alg.optimize(gen, pop)
 
-    uniq = set()
-    for ind in pareto_front[0]:
-        uniq.add(ind.fitness.values)
-    for ind in uniq:
-        print(ind)
+    makespan, twt, flow, setup, load, wip =\
+        output.get_min_metric(population)
 
-    mo = JspModel('JSPEval/xml/example.xml')
-    ev = JspEvaluator(mo)
-    for ind in pareto_front[0]:
-        if ind.fitness.values[0] == 40.0:  # select fastest solution
-            assign = ev.build_machine_assignment(ind)
-            sched = ev.execute_schedule(assign)
-            print(assign)
-            print(sched)
+    print('best makespan: {}'.format(makespan))
+    print('best twt: {}'.format(twt))
+    print('best flow: {}'.format(flow))
+    print('best setup: {}'.format(setup))
+    print('best load: {}'.format(load))
+    print('best wip: {}'.format(wip))

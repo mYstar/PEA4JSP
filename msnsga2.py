@@ -12,71 +12,72 @@ from JSPEval.jspmodel import JspModel
 from JSPEval.jspeval import JspEvaluator
 import params
 import operators
+import output
 
+# ---  Setup  ---
 
-generations, pop_size, f_model = params.get()
+# MPI environment
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
 rank = comm.Get_rank()
-generations = 10
-pop_size *= size
 
-# broadcast the model to all cores
 if rank == 0:
+    # read parameters
+    generations, pop_size, f_model = params.get()
+    pop_size *= size
+
+    # -- setup algorithm --
+
+    # init evaluator
     model = JspModel(f_model)
     evaluator = JspEvaluator(model)
-else:
-    evaluator = None
 
-evaluator = comm.bcast(evaluator, root=0)
-
-print('rank: {}, solution_length={}'.format(
-    rank,
-    evaluator.model.solution_length()))
-
-if rank == 0:
-    # creation of individuals
-    creator.create(
-        "FitnessMin",
-        base.Fitness,
-        weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0)
-        )
+    # init GA
+    creator.create("FitnessMin", base.Fitness,
+                   weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
     creator.create("Individual", JspSolution, fitness=creator.FitnessMin)
 
     toolbox = base.Toolbox()
-    toolbox.register("values",  # alias
-                     tools.initRepeat,  # fill container by repetition
-                     list,  # container type
-                     random.random,  # fill function
-                     model.solution_length())  # number of repetitions
-
+    toolbox.register("values",
+                     tools.initRepeat,
+                     list,
+                     random.random,
+                     model.solution_length())
     toolbox.register("individual",  # alias
                      operators.init_individual,  # generator function
                      creator.Individual,  # individual class
                      model,  # model to use
                      toolbox.values)  # value generator
-    toolbox.register(
-        "population",
-        tools.initRepeat,
-        list,
-        toolbox.individual)
-
+    toolbox.register("population",
+                     tools.initRepeat,
+                     list,
+                     toolbox.individual)
     toolbox.register("mate", operators.crossover)
     toolbox.register("mutate", operators.mutation, indpb=0.05)
     toolbox.register("select", tools.selNSGA2)
 
+    # init first population
     population = toolbox.population(n=pop_size)
-
     fits = map(lambda x:  operators.calc_fitness(x, evaluator), population)
     for fit, i_pop in zip(fits, population):
         i_pop.fitness.values = (fit[0], fit[1], fit[2], fit[3], fit[4], fit[5])
 else:
-    toolbox = None
+    evaluator = None
+    generations = None
+    pop_size = None
 
-off_values = None
+# ---  broadcast parameters and model  ---
+evaluator = comm.bcast(evaluator, root=0)
+generations = comm.bcast(generations, root=0)
+pop_size = comm.bcast(pop_size, root=0)
+
+# ---  main GA loop  ---
+root_values = None
 for _ in range(generations):
+
+    # -- execute genetic operators --
     if rank == 0:
-        # selection of mates
+        # selection
         emo.assignCrowdingDist(population)
         offspring = tools.selTournamentDCD(population, len(population))
 
@@ -88,58 +89,58 @@ for _ in range(generations):
             mutpb=0.1)
 
         # prepare individuals for scatter
-        off_values = np.empty([pop_size, model.solution_length()])
+        root_values = np.empty([pop_size, model.solution_length()])
         for i, ind in zip(range(len(offspring)), offspring):
-            off_values[i] = ind.values
-        off_values = np.reshape(
-            off_values,
+            root_values[i] = ind.values
+        root_values = np.reshape(
+            root_values,
             (size, int(pop_size/size), model.solution_length()))
 
-    # calculate new fitness
-    remote_values = np.empty(
-        [int(pop_size/size), evaluator.model.solution_length()])
-    comm.Scatter(off_values, remote_values, root=0)
-    remote_fits = np.array(
-        list(map(
-            lambda x: operators.calc_fitness(
-                JspSolution(evaluator.model, x),
-                evaluator),
-            remote_values)),
-        dtype=np.float32)
+    # -- PARALLEL: calculate fitness --
 
+    # scatter values over cores
+    remote_values = \
+        np.empty([int(pop_size/size), evaluator.model.solution_length()])
+    comm.Scatter(root_values, remote_values, root=0)
+
+    # calculation
+    newfit = map(
+        lambda x: operators.calc_fitness(
+            JspSolution(evaluator.model, x),
+            evaluator),
+        remote_values)
+
+    # gather results
+    remote_fits = np.array(list(newfit), dtype=np.float32)
     fits = None
     if rank == 0:
         fits = np.empty(
             [pop_size, 6],
             dtype=np.float32)
-
     comm.Gather(remote_fits, fits, root=0)
 
+    # -- select next population --
     if rank == 0:
+        # assign fitness
         fits = np.reshape(fits, (pop_size, 6))
         for fit, i_off in zip(fits, offspring):
             i_off.fitness.values = (fit[0], fit[1], fit[2],
                                     fit[3], fit[4], fit[5])
 
-        # select individuals for the next generation
+        # selection
         offspring.extend(population)
         population = toolbox.select(
             offspring,
             len(population))
 
+# ---  process results ---
 if rank == 0:
-    pareto_front = tools.sortNondominated(population, 500, True)
-    uniq = set()
-    for ind in pareto_front[0]:
-        uniq.add(ind.fitness.values)
-    for ind in uniq:
-        print(ind)
+    makespan, twt, flow, setup, load, wip =\
+        output.get_min_metric(population)
 
-    mo = JspModel('JSPEval/xml/example.xml')
-    ev = JspEvaluator(mo)
-    for ind in pareto_front[0]:
-        if ind.fitness.values[0] == 40.0:  # select fastest solution
-            assign = ev.build_machine_assignment(ind)
-            sched = ev.execute_schedule(assign)
-            print(assign)
-            print(sched)
+    print('best makespan: {}'.format(makespan))
+    print('best twt: {}'.format(twt))
+    print('best flow: {}'.format(flow))
+    print('best setup: {}'.format(setup))
+    print('best load: {}'.format(load))
+    print('best wip: {}'.format(wip))
