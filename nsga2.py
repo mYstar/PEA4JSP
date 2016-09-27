@@ -71,12 +71,16 @@ class NSGA2(object):
         toolbox.register("select", tools.selNSGA2)
 
         population = toolbox.population(n=pop)
-        fits = toolbox.map(toolbox.evaluate, population)
+        fits = map(
+            lambda x: operators.calc_fitness(
+                JspSolution(self.model, x.values),
+                self.evaluator),
+            population)
 
         for fit, i_pop in zip(fits, population):
             i_pop.fitness.values = fit
 
-        for _ in range(generations):
+        for g in range(generations):
             # selection of mates
             emo.assignCrowdingDist(population)
             offspring = tools.selTournamentDCD(population, len(population))
@@ -89,7 +93,12 @@ class NSGA2(object):
                 mutpb=0.1)
 
             # calculate new fitness
-            fits = toolbox.map(toolbox.evaluate, offspring)
+            fits = map(
+                lambda x: operators.calc_fitness(
+                    JspSolution(self.model, x.values),
+                    self.evaluator),
+                offspring)
+
             for fit, i_off in zip(fits, offspring):
                 i_off.fitness.values = fit
 

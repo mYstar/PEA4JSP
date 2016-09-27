@@ -60,7 +60,7 @@ if rank == 0:
     population = toolbox.population(n=pop_size)
     fits = map(lambda x:  operators.calc_fitness(x, evaluator), population)
     for fit, i_pop in zip(fits, population):
-        i_pop.fitness.values = (fit[0], fit[1], fit[2], fit[3], fit[4], fit[5])
+        i_pop.fitness.values = fit
 else:
     evaluator = None
     generations = None
@@ -111,12 +111,10 @@ for _ in range(generations):
         remote_values)
 
     # gather results
-    remote_fits = np.array(list(newfit), dtype=np.float32)
+    remote_fits = np.array(list(newfit))
     fits = None
     if rank == 0:
-        fits = np.empty(
-            [pop_size, 6],
-            dtype=np.float32)
+        fits = np.empty([pop_size, 6])
     comm.Gather(remote_fits, fits, root=0)
 
     # -- select next population --
@@ -124,8 +122,7 @@ for _ in range(generations):
         # assign fitness
         fits = np.reshape(fits, (pop_size, 6))
         for fit, i_off in zip(fits, offspring):
-            i_off.fitness.values = (fit[0], fit[1], fit[2],
-                                    fit[3], fit[4], fit[5])
+            i_off.fitness.values = fit
 
         # selection
         offspring.extend(population)
