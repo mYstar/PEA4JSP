@@ -21,9 +21,17 @@ cart = MPI.Intracomm(comm).Create_cart([2, 2], [True, True])
 rank = cart.Get_rank()
 size = cart.Get_size()
 
+# calculate neighbors
+coord = cart.Get_coords(rank)
+neighbor_coords = [[coord[0]-1, coord[1]],
+                   [coord[0], coord[1]-1],
+                   [coord[0]+1, coord[1]],
+                   [coord[0], coord[1]+1]]
+neighbors = set(map(cart.Get_cart_rank, neighbor_coords))
+print('rank: {}, neighbors: {}'.format(rank, neighbors))
+
 # read parameters
 generations, pop_size, f_model = params.get()
-pop_size *= size
 
 # -- setup algorithm --
 
@@ -62,7 +70,7 @@ for fit, i_pop in zip(fits, population):
     i_pop.fitness.values = fit
 
 # ---  main GA loop  ---
-for _ in range(generations):
+for gen in range(generations):
 
     # -- execute genetic operators --
     # selection
@@ -86,14 +94,47 @@ for _ in range(generations):
 
     # selection
     offspring.extend(population)
-    population = toolbox.select(
-        offspring,
-        len(population))
+    population = toolbox.select(offspring, len(population))
+
+    # --- migration ---
+
+    migration_interval = 5
+    migration_size = 5
+    # migrate own solutions
+    if gen % 5 == 0:
+        print('rank: {}, gen: {}, solutions sent')
+        # select solutions for migration
+        sol_send = toolbox.select(offspring, migration_size)
+        # send best solutions to neighbors
+        reqs = []
+        for nb in neighbors:
+            cart.isend(sol_send, nb, tag=gen)
+            reqs.append(cart.irecv(source=nb, tag=gen))
+        ready = False
+
+    # receive migrants
+    if not ready:
+        ready, sol_recv = MPI.Request.testall(reqs)
+        if ready:
+            print('rank: {}, gen: {}, solutions received')
+            # flatten list (uses overloaded '+' operator)
+            sol_recv = sum(sol_recv, [])
+            print('solutions: {}'.format(sol_recv))
+            population = toolbox.select(
+                population,
+                len(population)-len(sol_recv))
+            population.extend(sol_recv)
+
 
 # ---  process results ---
 makespan, twt, flow, setup, load, wip =\
     output.get_min_metric(population)
 
+# collect results
+
+# generate pareto front
+
+# output
 print('rank: {}'.format(rank))
 print('best makespan: {}'.format(makespan))
 print('best twt: {}'.format(twt))

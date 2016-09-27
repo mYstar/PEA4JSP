@@ -23,7 +23,6 @@ size = cart.Get_size()
 
 # read parameters
 generations, pop_size, f_model = params.get()
-pop_size *= size
 
 # -- setup algorithm --
 
