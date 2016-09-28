@@ -80,7 +80,7 @@ class NSGA2(object):
         for fit, i_pop in zip(fits, population):
             i_pop.fitness.values = fit
 
-        for g in range(generations):
+        for gen in range(generations):
             # selection of mates
             emo.assignCrowdingDist(population)
             offspring = tools.selTournamentDCD(population, len(population))

@@ -1,5 +1,6 @@
 import sys
 import getopt
+import math
 
 
 def get():
@@ -42,3 +43,19 @@ def get():
 \npopulation: {}\nmodelfile: {}'.format(gen, pop, f_model))
 
     return (gen, pop, f_model)
+
+
+def calculate_topology(nodes):
+    """Calculates the optimal (most connections) 2D topology for a number of nodes.
+
+    :nodes: the number of nodes to calculate the topology for
+    :returns: a tuple (width, height) of the resulting topology
+
+    """
+    root = int(math.sqrt(nodes))
+
+    for i in range(root, 1, -1):
+        if nodes % i == 0:
+            return (i, int(nodes/i))
+
+    return (1, nodes)

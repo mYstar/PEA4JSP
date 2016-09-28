@@ -3,6 +3,7 @@ to evaluate the individuals. The fitness function is evaluated in parallel by
 the Slave processors.
 """
 import random
+import numpy as np
 from mpi4py import MPI
 from deap import creator, base, tools, algorithms
 from deap110 import emo
@@ -17,9 +18,12 @@ import output
 
 # MPI environment
 comm = MPI.COMM_WORLD
-cart = MPI.Intracomm(comm).Create_cart([2, 2], [True, True])
+size = comm.Get_size()
+topology = params.calculate_topology(size)
+cart = MPI.Intracomm(comm).Create_cart(
+        [topology[0], topology[1]],
+        [True, True])
 rank = cart.Get_rank()
-size = cart.Get_size()
 
 # calculate neighbors
 coord = cart.Get_coords(rank)
@@ -70,6 +74,7 @@ for fit, i_pop in zip(fits, population):
     i_pop.fitness.values = fit
 
 # ---  main GA loop  ---
+reqs = []
 for gen in range(generations):
 
     # -- execute genetic operators --
@@ -85,7 +90,11 @@ for gen in range(generations):
         mutpb=0.1)
 
     # fitness calculation
-    fits = map(lambda x: operators.calc_fitness(x, evaluator), offspring)
+    fits = map(
+        lambda x: operators.calc_fitness(
+            JspSolution(model, x.values),
+            evaluator),
+        offspring)
 
     # -- select next population --
     # assign fitness
@@ -102,43 +111,80 @@ for gen in range(generations):
     migration_size = 5
     # migrate own solutions
     if gen % 5 == 0:
-        print('rank: {}, gen: {}, solutions sent')
+        print('rank: {}, gen: {}, solutions sent'.format(rank, gen))
         # select solutions for migration
-        sol_send = toolbox.select(offspring, migration_size)
+        migrants = toolbox.select(population, migration_size)
+        sol_send = np.empty(
+            [migration_size, model.solution_length()],
+            dtype=np.float32)
+        for i, ind in zip(range(migration_size), migrants):
+            sol_send[i] = ind.values
+
         # send best solutions to neighbors
+        for req in reqs:
+            req.Free()
         reqs = []
-        for nb in neighbors:
-            cart.isend(sol_send, nb, tag=gen)
-            reqs.append(cart.irecv(source=nb, tag=gen))
+        sol_recv = np.empty(
+            [len(neighbors), migration_size, model.solution_length()],
+            dtype=np.float32)
+        for i, nb in zip(range(len(neighbors)), neighbors):
+            cart.Isend(sol_send, nb, tag=gen)
+            reqs.append(cart.Irecv(sol_recv[i], source=nb, tag=gen))
         ready = False
 
     # receive migrants
     if not ready:
-        ready, sol_recv = MPI.Request.testall(reqs)
+        ready, _ = MPI.Request.testall(reqs)
         if ready:
-            print('rank: {}, gen: {}, solutions received')
-            # flatten list (uses overloaded '+' operator)
-            sol_recv = sum(sol_recv, [])
-            print('solutions: {}'.format(sol_recv))
+            reqs = []
+            print('rank: {}, gen: {}, solutions received'.format(rank, gen))
+            # flatten list
+            sol_recv = [values for n_list in sol_recv for values in n_list]
+
+            # build solutions
+            migrants = []
+            for values in sol_recv:
+                migrants.append(creator.Individual(model, values))
+
+            # calculate fitness
+            migfit = map(
+                lambda x: operators.calc_fitness(
+                    JspSolution(model, x.values), evaluator),
+                migrants)
+            for fit, mig in zip(migfit, migrants):
+                mig.fitness.values = fit
+
+            # integrate into population
             population = toolbox.select(
                 population,
-                len(population)-len(sol_recv))
-            population.extend(sol_recv)
+                len(population)-len(migrants))
+            population.extend(migrants)
 
 
 # ---  process results ---
-makespan, twt, flow, setup, load, wip =\
-    output.get_min_metric(population)
 
 # collect results
-
-# generate pareto front
+all_pop = comm.gather(population, root=0)
 
 # output
-print('rank: {}'.format(rank))
-print('best makespan: {}'.format(makespan))
-print('best twt: {}'.format(twt))
-print('best flow: {}'.format(flow))
-print('best setup: {}'.format(setup))
-print('best load: {}'.format(load))
-print('best wip: {}'.format(wip))
+if rank == 0:
+    all_pop = sum(all_pop, [])
+    makespan, twt, flow, setup, load, wip =\
+        output.get_min_metric(all_pop)
+    print('rank: {}'.format(rank))
+    print('best makespan: {}'.format(makespan))
+    print('best twt: {}'.format(twt))
+    print('best flow: {}'.format(flow))
+    print('best setup: {}'.format(setup))
+    print('best load: {}'.format(load))
+    print('best wip: {}'.format(wip))
+else:
+    makespan, twt, flow, setup, load, wip =\
+        output.get_min_metric(population)
+    print('rank: {}'.format(rank))
+    print('best makespan: {}'.format(makespan))
+    print('best twt: {}'.format(twt))
+    print('best flow: {}'.format(flow))
+    print('best setup: {}'.format(setup))
+    print('best load: {}'.format(load))
+    print('best wip: {}'.format(wip))
