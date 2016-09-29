@@ -68,6 +68,16 @@ def get():
     if len(files) > 0:
         f_model = files[0]
 
+    if not pop % 4 == 0:
+        raise ValueError('The population size has to be divisible by 4 \
+for the selection to work.')
+
+    if not migr_s <= pop:
+        raise ValueError('migration size cannot exceed population.')
+
+    if not migr_i > 0:
+        raise ValueError('migration interval has to be positive.')
+
     print('Algorithm using:\ngenerations: {}\
     population: {}\nmodelfile: {}'.format(gen, pop, f_model))
     print('migration size: {}\nmigration interval: {}'
