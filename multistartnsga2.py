@@ -17,12 +17,11 @@ import output
 
 # MPI environment
 comm = MPI.COMM_WORLD
-cart = MPI.Intracomm(comm).Create_cart([2, 2], [True, True])
-rank = cart.Get_rank()
-size = cart.Get_size()
+rank = comm.Get_rank()
 
 # read parameters
-generations, pop_size, f_model = params.get()
+generations, pop_size, f_model, _, _,\
+        mut_prob, mut_eta, xover_prob, xover_eta = params.get()
 
 # -- setup algorithm --
 
@@ -31,8 +30,9 @@ model = JspModel(f_model)
 evaluator = JspEvaluator(model)
 
 # init GA
-creator.create("FitnessMin", base.Fitness,
-               weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+fitness_size = evaluator.metrics_count()
+weights = tuple([-1 for _ in range(fitness_size)])
+creator.create("FitnessMin", base.Fitness, weights=weights)
 creator.create("Individual", JspSolution, fitness=creator.FitnessMin)
 
 toolbox = base.Toolbox()
@@ -50,8 +50,8 @@ toolbox.register("population",
                  tools.initRepeat,
                  list,
                  toolbox.individual)
-toolbox.register("mate", operators.crossover)
-toolbox.register("mutate", operators.mutation, indpb=0.05)
+toolbox.register("mate", operators.crossover, eta=xover_eta)
+toolbox.register("mutate", operators.mutation, indpb=mut_prob, eta=mut_eta)
 toolbox.register("select", tools.selNSGA2)
 
 # init first population
@@ -72,11 +72,15 @@ for _ in range(generations):
     offspring = algorithms.varAnd(
         offspring,
         toolbox,
-        cxpb=0.5,
-        mutpb=0.1)
+        cxpb=xover_prob,
+        mutpb=1.0)  # is taken care of by mutation operator
 
     # fitness calculation
-    fits = map(lambda x: operators.calc_fitness(x, evaluator), offspring)
+    fits = map(
+        lambda x: operators.calc_fitness(
+            JspSolution(model, x.values),
+            evaluator),
+        offspring)
 
     # -- select next population --
     # assign fitness
@@ -90,13 +94,19 @@ for _ in range(generations):
         len(population))
 
 # ---  process results ---
-makespan, twt, flow, setup, load, wip =\
-    output.get_min_metric(population)
 
-print('rank: {}'.format(rank))
-print('best makespan: {}'.format(makespan))
-print('best twt: {}'.format(twt))
-print('best flow: {}'.format(flow))
-print('best setup: {}'.format(setup))
-print('best load: {}'.format(load))
-print('best wip: {}'.format(wip))
+# collect results
+all_pop = comm.gather(population, root=0)
+
+# output
+if rank == 0:
+    all_pop = sum(all_pop, [])
+    makespan, twt, flow, setup, load, wip =\
+        output.get_min_metric(all_pop)
+    print('rank: {}'.format(rank))
+    print('best makespan: {}'.format(makespan))
+    print('best twt: {}'.format(twt))
+    print('best flow: {}'.format(flow))
+    print('best setup: {}'.format(setup))
+    print('best load: {}'.format(load))
+    print('best wip: {}'.format(wip))

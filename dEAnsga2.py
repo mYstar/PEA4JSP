@@ -35,7 +35,8 @@ neighbors = set(map(cart.Get_cart_rank, neighbor_coords))
 print('rank: {}, neighbors: {}'.format(rank, neighbors))
 
 # read parameters
-generations, pop_size, f_model = params.get()
+generations, pop_size, f_model, migr_int, migr_size,\
+        mut_prob, mut_eta, xover_prob, xover_eta = params.get()
 
 # -- setup algorithm --
 
@@ -44,8 +45,9 @@ model = JspModel(f_model)
 evaluator = JspEvaluator(model)
 
 # init GA
-creator.create("FitnessMin", base.Fitness,
-               weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+fitness_size = evaluator.metrics_count()
+weights = tuple([-1 for _ in range(fitness_size)])
+creator.create("FitnessMin", base.Fitness, weights=weights)
 creator.create("Individual", JspSolution, fitness=creator.FitnessMin)
 
 toolbox = base.Toolbox()
@@ -63,8 +65,8 @@ toolbox.register("population",
                  tools.initRepeat,
                  list,
                  toolbox.individual)
-toolbox.register("mate", operators.crossover)
-toolbox.register("mutate", operators.mutation, indpb=0.05)
+toolbox.register("mate", operators.crossover, eta=xover_eta)
+toolbox.register("mutate", operators.mutation, indpb=mut_prob, eta=mut_eta)
 toolbox.register("select", tools.selNSGA2)
 
 # init first population
@@ -86,8 +88,8 @@ for gen in range(generations):
     offspring = algorithms.varAnd(
         offspring,
         toolbox,
-        cxpb=0.5,
-        mutpb=0.1)
+        cxpb=xover_prob,
+        mutpb=1.0)
 
     # fitness calculation
     fits = map(
@@ -107,25 +109,23 @@ for gen in range(generations):
 
     # --- migration ---
 
-    migration_interval = 5
-    migration_size = 5
     # migrate own solutions
-    if gen % 5 == 0:
+    if gen % migr_int == 0:
         print('rank: {}, gen: {}, solutions sent'.format(rank, gen))
         # select solutions for migration
-        migrants = toolbox.select(population, migration_size)
+        migrants = toolbox.select(population, migr_size)
         sol_send = np.empty(
-            [migration_size, model.solution_length()],
+            [migr_size, model.solution_length()],
             dtype=np.float32)
-        for i, ind in zip(range(migration_size), migrants):
+        for i, ind in zip(range(migr_size), migrants):
             sol_send[i] = ind.values
 
         # send best solutions to neighbors
-        for req in reqs:
+        for req in reqs:  # close old requests if they are not ready
             req.Free()
         reqs = []
         sol_recv = np.empty(
-            [len(neighbors), migration_size, model.solution_length()],
+            [len(neighbors), migr_size, model.solution_length()],
             dtype=np.float32)
         for i, nb in zip(range(len(neighbors)), neighbors):
             cart.Isend(sol_send, nb, tag=gen)
@@ -171,16 +171,6 @@ if rank == 0:
     all_pop = sum(all_pop, [])
     makespan, twt, flow, setup, load, wip =\
         output.get_min_metric(all_pop)
-    print('rank: {}'.format(rank))
-    print('best makespan: {}'.format(makespan))
-    print('best twt: {}'.format(twt))
-    print('best flow: {}'.format(flow))
-    print('best setup: {}'.format(setup))
-    print('best load: {}'.format(load))
-    print('best wip: {}'.format(wip))
-else:
-    makespan, twt, flow, setup, load, wip =\
-        output.get_min_metric(population)
     print('rank: {}'.format(rank))
     print('best makespan: {}'.format(makespan))
     print('best twt: {}'.format(twt))

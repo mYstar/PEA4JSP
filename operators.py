@@ -26,7 +26,7 @@ def init_individual(ind_cls, model, value_func):
     return ind_cls(model, values)
 
 
-def crossover(ind1, ind2):
+def crossover(ind1, ind2, eta):
     """Performs a 2-Point Crossover on Individuals.
 
     :ind1: first parent
@@ -42,7 +42,7 @@ def crossover(ind1, ind2):
     genome1, genome2 = tools.cxSimulatedBinaryBounded(
         genome1,
         genome2,
-        2.0,  # eta_c 2.0 == wide search; 5.0 narrow search
+        eta,  # eta_c 2.0 == wide search; 5.0 narrow search
         0.0,  # lower bound
         1.0)  # upper bound
 
@@ -53,7 +53,7 @@ def crossover(ind1, ind2):
     return (ind1, ind2)
 
 
-def mutation(individual, indpb):
+def mutation(individual, indpb, eta):
     """Mutates an individual using polynomial bounded mutation.
 
     :individual: the individual to mutate
@@ -63,7 +63,7 @@ def mutation(individual, indpb):
     """
     gen = tools.mutPolynomialBounded(
         individual.values,
-        1.0,  # eta_m 1.0 == high spread; 4.0 low spread
+        eta,  # eta_m 1.0 == high spread; 4.0 low spread
         0.0,  # lower bound
         1.0,  # upper bound
         indpb)

@@ -27,21 +27,25 @@ class NSGA2(object):
         self.model = JspModel(modelfile)
         self.evaluator = JspEvaluator(self.model)
 
-    def optimize(self, generations, population):
+    def optimize(self, generations, population, mut_pb, mut_eta,
+                 xover_pb, xover_eta):
         """Performs the Optimisation via Master-Slave NSGA-II.
 
         :modelfile: the xml file to read the model from
         :generations: the number of generations to perform
         :population: the size of the population to use
+        :mut_pb: mutation probability per genome
+        :mut_eta: mutation spread (1.0: high spread; 4.0: low spread)
+        :xover_pb: crossover probability
+        :xover_eta: crossover spread (2.0: high spread; 5.0: low spread)
+
         :returns: None
 
         """
         # creation of individuals
-        creator.create(
-            "FitnessMin",
-            base.Fitness,
-            weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0)
-            )
+        fitness_size = self.evaluator.metrics_count()
+        weights = tuple([-1 for _ in range(fitness_size)])
+        creator.create("FitnessMin", base.Fitness, weights=weights)
         creator.create("Individual", JspSolution, fitness=creator.FitnessMin)
 
         toolbox = base.Toolbox()
@@ -66,8 +70,9 @@ class NSGA2(object):
             "evaluate",
             operators.calc_fitness,
             evaluator=self.evaluator)
-        toolbox.register("mate", operators.crossover)
-        toolbox.register("mutate", operators.mutation, indpb=0.05)
+        toolbox.register("mate", operators.crossover, eta=xover_eta)
+        toolbox.register("mutate", operators.mutation,
+                         indpb=mut_pb, eta=mut_eta)
         toolbox.register("select", tools.selNSGA2)
 
         population = toolbox.population(n=pop)
@@ -89,8 +94,8 @@ class NSGA2(object):
             offspring = algorithms.varAnd(
                 offspring,
                 toolbox,
-                cxpb=0.5,
-                mutpb=0.1)
+                cxpb=xover_pb,
+                mutpb=1.0)  # is handled already by the mutation operator
 
             # calculate new fitness
             fits = map(
@@ -111,10 +116,11 @@ class NSGA2(object):
         return population
 
 if __name__ == '__main__':
-    gen, pop, f_model = params.get()
+    gen, pop, f_model, _, _, mut_pb,\
+        mut_eta, xover_pb, xover_eta = params.get()
 
     alg = NSGA2(f_model)
-    population = alg.optimize(gen, pop)
+    population = alg.optimize(gen, pop, mut_pb, mut_eta, xover_pb, xover_eta)
 
     makespan, twt, flow, setup, load, wip =\
         output.get_min_metric(population)

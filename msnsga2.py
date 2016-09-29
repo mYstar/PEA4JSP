@@ -23,7 +23,8 @@ rank = comm.Get_rank()
 
 if rank == 0:
     # read parameters
-    generations, pop_size, f_model = params.get()
+    generations, pop_size, f_model, _, _,\
+            mut_prob, mut_eta, xover_prob, xover_eta = params.get()
     pop_size *= size
 
     # -- setup algorithm --
@@ -33,8 +34,9 @@ if rank == 0:
     evaluator = JspEvaluator(model)
 
     # init GA
-    creator.create("FitnessMin", base.Fitness,
-                   weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+    fitness_size = evaluator.metrics_count()
+    weights = tuple([-1 for _ in range(fitness_size)])
+    creator.create("FitnessMin", base.Fitness, weights=weights)
     creator.create("Individual", JspSolution, fitness=creator.FitnessMin)
 
     toolbox = base.Toolbox()
@@ -52,8 +54,8 @@ if rank == 0:
                      tools.initRepeat,
                      list,
                      toolbox.individual)
-    toolbox.register("mate", operators.crossover)
-    toolbox.register("mutate", operators.mutation, indpb=0.05)
+    toolbox.register("mate", operators.crossover, eta=xover_eta)
+    toolbox.register("mutate", operators.mutation, indpb=mut_prob, eta=mut_eta)
     toolbox.register("select", tools.selNSGA2)
 
     # init first population
@@ -85,8 +87,8 @@ for _ in range(generations):
         offspring = algorithms.varAnd(
             offspring,
             toolbox,
-            cxpb=0.5,
-            mutpb=0.1)
+            cxpb=xover_prob,
+            mutpb=1.0)  # is handled by mutation operator itself
 
         # prepare individuals for scatter
         root_values = np.empty([pop_size, model.solution_length()])
@@ -114,13 +116,13 @@ for _ in range(generations):
     remote_fits = np.array(list(newfit))
     fits = None
     if rank == 0:
-        fits = np.empty([pop_size, 6])
+        fits = np.empty([pop_size, fitness_size])
     comm.Gather(remote_fits, fits, root=0)
 
     # -- select next population --
     if rank == 0:
         # assign fitness
-        fits = np.reshape(fits, (pop_size, 6))
+        fits = np.reshape(fits, (pop_size, fitness_size))
         for fit, i_off in zip(fits, offspring):
             i_off.fitness.values = fit
 
