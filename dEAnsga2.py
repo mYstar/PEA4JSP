@@ -43,6 +43,7 @@ generations, pop_size, f_model, migr_int, migr_size,\
 # init evaluator
 model = JspModel(f_model)
 evaluator = JspEvaluator(model)
+solution_length = model.solution_length()
 
 # init GA
 fitness_size = evaluator.metrics_count()
@@ -55,7 +56,7 @@ toolbox.register("values",
                  tools.initRepeat,
                  list,
                  random.random,
-                 model.solution_length())
+                 solution_length)
 toolbox.register("individual",  # alias
                  operators.init_individual,  # generator function
                  creator.Individual,  # individual class
@@ -114,18 +115,19 @@ for gen in range(generations):
         print('rank: {}, gen: {}, solutions sent'.format(rank, gen))
         # select solutions for migration
         migrants = toolbox.select(population, migr_size)
+        # prepare values and fitness for sending
         sol_send = np.empty(
-            [migr_size, model.solution_length()],
+            [migr_size, solution_length + fitness_size],
             dtype=np.float32)
         for i, ind in zip(range(migr_size), migrants):
-            sol_send[i] = ind.values
+            sol_send[i] = np.append(ind.values, list(ind.fitness.values))
 
         # send best solutions to neighbors
         for req in reqs:  # close old requests if they are not ready
             req.Free()
         reqs = []
         sol_recv = np.empty(
-            [len(neighbors), migr_size, model.solution_length()],
+            [len(neighbors), migr_size, solution_length + fitness_size],
             dtype=np.float32)
         for i, nb in zip(range(len(neighbors)), neighbors):
             cart.Isend(sol_send, nb, tag=gen)
@@ -144,15 +146,17 @@ for gen in range(generations):
             # build solutions
             migrants = []
             for values in sol_recv:
-                migrants.append(creator.Individual(model, values))
+                new_ind = creator.Individual(model, values[:solution_length])
+                new_ind.fitness.values = values[solution_length:]
+                migrants.append(new_ind)
 
-            # calculate fitness
-            migfit = map(
-                lambda x: operators.calc_fitness(
-                    JspSolution(model, x.values), evaluator),
-                migrants)
-            for fit, mig in zip(migfit, migrants):
-                mig.fitness.values = fit
+#             # calculate fitness
+#             migfit = map(
+#                 lambda x: operators.calc_fitness(
+#                     JspSolution(model, x.values), evaluator),
+#                 migrants)
+#             for fit, mig in zip(migfit, migrants):
+#                 mig.fitness.values = fit
 
             # integrate into population
             population = toolbox.select(
