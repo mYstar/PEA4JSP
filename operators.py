@@ -35,8 +35,8 @@ def crossover(ind1, ind2, eta):
 
     """
     # get the genomes
-    genome1 = ind1.values
-    genome2 = ind2.values
+    genome1 = ind1.get_values()
+    genome2 = ind2.get_values()
 
     # perform the crossover only on the genomes
     genome1, genome2 = tools.cxSimulatedBinaryBounded(
@@ -47,8 +47,8 @@ def crossover(ind1, ind2, eta):
         1.0)  # upper bound
 
     # change the values of the individuals
-    ind1.values = genome1
-    ind2.values = genome2
+    ind1.set_values(genome1)
+    ind2.set_values(genome2)
 
     return (ind1, ind2)
 
@@ -62,11 +62,11 @@ def mutation(individual, indpb, eta):
 
     """
     gen = tools.mutPolynomialBounded(
-        individual.values,
+        individual.get_values(),
         eta,  # eta_m 1.0 == high spread; 4.0 low spread
         0.0,  # lower bound
         1.0,  # upper bound
         indpb)
-    individual.values = gen[0]
+    individual.set_values(gen[0])
 
     return (individual,)

@@ -93,11 +93,7 @@ for gen in range(generations):
         mutpb=1.0)
 
     # fitness calculation
-    fits = map(
-        lambda x: operators.calc_fitness(
-            JspSolution(model, x.values),
-            evaluator),
-        offspring)
+    fits = map(lambda x: operators.calc_fitness(x, evaluator), offspring)
 
     # -- select next population --
     # assign fitness
@@ -120,7 +116,7 @@ for gen in range(generations):
             [migr_size, solution_length + fitness_size],
             dtype=np.float32)
         for i, ind in zip(range(migr_size), migrants):
-            sol_send[i] = np.append(ind.values, list(ind.fitness.values))
+            sol_send[i] = np.append(ind.get_values(), list(ind.fitness.values))
 
         # send best solutions to neighbors
         for req in reqs:  # close old requests if they are not ready
@@ -149,14 +145,6 @@ for gen in range(generations):
                 new_ind = creator.Individual(model, values[:solution_length])
                 new_ind.fitness.values = values[solution_length:]
                 migrants.append(new_ind)
-
-#             # calculate fitness
-#             migfit = map(
-#                 lambda x: operators.calc_fitness(
-#                     JspSolution(model, x.values), evaluator),
-#                 migrants)
-#             for fit, mig in zip(migfit, migrants):
-#                 mig.fitness.values = fit
 
             # integrate into population
             population = toolbox.select(

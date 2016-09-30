@@ -66,10 +66,6 @@ class NSGA2(object):
             list,
             toolbox.individual)
 
-        toolbox.register(
-            "evaluate",
-            operators.calc_fitness,
-            evaluator=self.evaluator)
         toolbox.register("mate", operators.crossover, eta=xover_eta)
         toolbox.register("mutate", operators.mutation,
                          indpb=mut_pb, eta=mut_eta)
@@ -77,9 +73,7 @@ class NSGA2(object):
 
         population = toolbox.population(n=pop)
         fits = map(
-            lambda x: operators.calc_fitness(
-                JspSolution(self.model, x.values),
-                self.evaluator),
+            lambda x: operators.calc_fitness(x, self.evaluator),
             population)
 
         for fit, i_pop in zip(fits, population):
@@ -99,9 +93,7 @@ class NSGA2(object):
 
             # calculate new fitness
             fits = map(
-                lambda x: operators.calc_fitness(
-                    JspSolution(self.model, x.values),
-                    self.evaluator),
+                lambda x: operators.calc_fitness(x, self.evaluator),
                 offspring)
 
             for fit, i_off in zip(fits, offspring):

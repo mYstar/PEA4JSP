@@ -77,9 +77,7 @@ for _ in range(generations):
 
     # fitness calculation
     fits = map(
-        lambda x: operators.calc_fitness(
-            JspSolution(model, x.values),
-            evaluator),
+        lambda x: operators.calc_fitness(x, evaluator),
         offspring)
 
     # -- select next population --
