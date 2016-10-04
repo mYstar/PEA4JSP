@@ -110,7 +110,7 @@ class NSGA2(object):
         return population
 
 if __name__ == '__main__':
-    term_m, term_v, pop, f_model, _, _, mut_pb,\
+    term_m, term_v, pop, f_out, f_model, _, _, mut_pb,\
         mut_eta, xover_pb, xover_eta = params.get()
 
     alg = NSGA2(f_model)
@@ -120,9 +120,6 @@ if __name__ == '__main__':
     makespan, twt, flow, setup, load, wip =\
         output.get_min_metric(population)
 
-    print('best makespan: {}'.format(makespan))
-    print('best twt: {}'.format(twt))
-    print('best flow: {}'.format(flow))
-    print('best setup: {}'.format(setup))
-    print('best load: {}'.format(load))
-    print('best wip: {}'.format(wip))
+    with open(f_out, "a") as myfile:
+        myfile.write("{:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n".format(
+            makespan, twt, flow, setup, load, wip))

@@ -23,7 +23,7 @@ rank = comm.Get_rank()
 
 if rank == 0:
     # read parameters
-    term_m, term_v, pop_size, f_model, _, _,\
+    term_m, term_v, pop_size, f_out, f_model, _, _,\
             mut_prob, mut_eta, xover_prob, xover_eta = params.get()
     pop_size *= size
 

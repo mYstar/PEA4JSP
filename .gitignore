@@ -1,5 +1,7 @@
 # JSPEval sourcecode
 JSPEval
+# results from test runs
+results
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -20,7 +20,7 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 
 # read parameters
-term_m, term_v, pop_size, f_model, _, _,\
+term_m, term_v, pop_size, f_out, f_model, _, _,\
         mut_prob, mut_eta, xover_prob, xover_eta = params.get()
 
 # -- setup algorithm --

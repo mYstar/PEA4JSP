@@ -35,7 +35,7 @@ neighbors = set(map(cart.Get_cart_rank, neighbor_coords))
 print('rank: {}, neighbors: {}'.format(rank, neighbors))
 
 # read parameters
-term_m, term_v, pop_size, f_model, migr_int, migr_size,\
+term_m, term_v, pop_size, f_out, f_model, migr_int, migr_size,\
         mut_prob, mut_eta, xover_prob, xover_eta = params.get()
 
 # -- setup algorithm --

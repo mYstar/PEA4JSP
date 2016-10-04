@@ -16,22 +16,24 @@ def get():
         - mutation eta (1.0: high spread; 4.0: low spread)
         - crossover probability
         - crossover eta (2.0: high spread; 5.0: low spread)
+        - output file
+        - modelfile
 
-    :returns: a tuple (gen, pop, file, mig_int, mig_size,
-                       mut_prob, mut_eta, xover_prob, xover_eta)
+    :returns: a tuple (term_meth, term_val, pop, outputfile, modelfile,
+            mig_int, mig_size, mut_prob, mut_eta, xover_prob, xover_eta)
     """
     usage_string = "usage: python3 <algorithm>.py --term-method\
 <generations|time|makespan> -t <term_value> -p <population per core>\
 --mi <migration intervall> --ms <migration size> --mp <mutation probability>\
-----me <mutation eta>\ xp <crossover probability> --xe <crossover eta>\
---<modelfile>"
+--me <mutation eta>\ xp <crossover probability> --xe <crossover eta>\
+-o <outputfile> <modelfile>"
 
     # read the given parameters
     try:
         options, files = getopt.getopt(
                 sys.argv[1:],
-                "ht:p:",
-                ["help", "population=", "mi=", "ms=", "mp=",
+                "ht:p:o:",
+                ["help", "population=", "mi=", "ms=", "mp=", "output",
                  "me=", "xp=", "xe=", "term-method=", "term-value="])
     except getopt.GetoptError:
         print(usage_string)
@@ -46,6 +48,7 @@ def get():
     mut_eta = 1.0
     xover_pb = 1.0
     xover_eta = 2.0
+    output = 'results.txt'
 
     f_model = './JSPEval/xml/example.xml'
     for opt, arg in options:
@@ -54,6 +57,8 @@ def get():
             sys.exit()
         elif opt in ('-t', '--term-value'):
             term_value = float(arg)
+        elif opt in ('-o', '--output'):
+            output = arg
         elif opt in ('--term-method'):
             term_method = arg
             if term_method not in ('generations', 'time', 'makespan'):
@@ -104,7 +109,7 @@ for the selection to work.')
     print('crossover prob: {}\ncrossover eta: {}'
           .format(xover_pb, xover_eta))
 
-    return (term_method, term_value, pop, f_model, migr_i, migr_s,
+    return (term_method, term_value, pop, output, f_model, migr_i, migr_s,
             mut_pb, mut_eta, xover_pb, xover_eta)
 
 
