@@ -1,11 +1,13 @@
 import sys
+import time
 import getopt
 import math
 
 
 def get():
     """Parses the commandline parameters for:
-        - number of generations
+        - termination method
+        - termination value
         - population size
         - modelfile for optimization
         - migration interval
@@ -18,23 +20,25 @@ def get():
     :returns: a tuple (gen, pop, file, mig_int, mig_size,
                        mut_prob, mut_eta, xover_prob, xover_eta)
     """
-    usage_string = "usage: python3 <algorithm>.py -g \
-<generations> -p <population per core> --mi <migration intervall>\
---ms <migration size> --mp <mutation probability> --me <mutation eta>\
---xp <crossover probability> --xe <crossover eta> <modelfile>"
+    usage_string = "usage: python3 <algorithm>.py --term-method\
+<generations|time|makespan> -t <term_value> -p <population per core>\
+--mi <migration intervall> --ms <migration size> --mp <mutation probability>\
+----me <mutation eta>\ xp <crossover probability> --xe <crossover eta>\
+--<modelfile>"
 
     # read the given parameters
     try:
         options, files = getopt.getopt(
                 sys.argv[1:],
-                "hg:p:",
-                ["help", "generations=", "population=", "mi=",
-                 "ms=", "mp=", "me=", "xp=", "xe="])
+                "ht:p:",
+                ["help", "population=", "mi=", "ms=", "mp=",
+                 "me=", "xp=", "xe=", "term-method=", "term-value="])
     except getopt.GetoptError:
         print(usage_string)
         sys.exit(1)
 
-    gen = 10
+    term_value = 10
+    term_method = 'generations'
     pop = 100
     migr_i = 5
     migr_s = 5
@@ -48,8 +52,13 @@ def get():
         if opt in ("-h", "--help"):
             print(usage_string)
             sys.exit()
-        elif opt in ('-g', '--generations'):
-            gen = int(arg)
+        elif opt in ('-t', '--term-value'):
+            term_value = float(arg)
+        elif opt in ('--term-method'):
+            term_method = arg
+            if term_method not in ('generations', 'time', 'makespan'):
+                print('termination method unknown using: generations')
+                term_method = 'generations'
         elif opt in ('-p', '--population'):
             pop = int(arg)
         elif opt == "--mi":
@@ -65,6 +74,10 @@ def get():
         elif opt == "--xe":
             xover_eta = float(arg)
 
+    # calculate the endtime
+    if term_method == 'time':
+        term_value = term_value * 60 + time.time()
+
     if len(files) > 0:
         f_model = files[0]
 
@@ -78,8 +91,12 @@ for the selection to work.')
     if not migr_i > 0:
         raise ValueError('migration interval has to be positive.')
 
-    print('Algorithm using:\ngenerations: {}\
-    population: {}\nmodelfile: {}'.format(gen, pop, f_model))
+    print('Algorithm using:\ntermination method: {}\ntermination value: {}\
+    population: {}\nmodelfile: {}'.format(
+        term_method,
+        term_value,
+        pop,
+        f_model))
     print('migration size: {}\nmigration interval: {}'
           .format(migr_s, migr_i))
     print('mutation prob: {}\nmutation eta: {}'
@@ -87,7 +104,7 @@ for the selection to work.')
     print('crossover prob: {}\ncrossover eta: {}'
           .format(xover_pb, xover_eta))
 
-    return (gen, pop, f_model, migr_i, migr_s,
+    return (term_method, term_value, pop, f_model, migr_i, migr_s,
             mut_pb, mut_eta, xover_pb, xover_eta)
 
 

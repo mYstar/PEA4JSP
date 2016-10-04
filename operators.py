@@ -1,4 +1,5 @@
 from deap import tools
+import time
 
 
 def calc_fitness(individual, evaluator):
@@ -70,3 +71,30 @@ def mutation(individual, indpb, eta):
     individual.set_values(gen[0])
 
     return (individual,)
+
+
+def termination(method, value, generation, population):
+    """Checks for the termination criterion. Knows 3 different termination methods:
+        - after a number of generations
+        - after an amount of wall clock time
+        - when a defined makespan is met
+
+    :method: a string that determines the method ('generations', 'time' or
+             'makespan')
+    :value: the comparison value to use
+    :generation: the current generation
+    :population: the population to check for makespan
+    :returns: a boolean value, if the termination criterion is met
+
+    """
+    if method == 'generations':
+        return value <= generation
+    if method == 'time':
+        return value < time.time()
+    if method == 'makespan':
+        for ind in population:
+            if value > ind.fitness.values[0]:
+                return True
+        return False
+
+    return True

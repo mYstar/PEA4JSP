@@ -27,12 +27,12 @@ class NSGA2(object):
         self.model = JspModel(modelfile)
         self.evaluator = JspEvaluator(self.model)
 
-    def optimize(self, generations, population, mut_pb, mut_eta,
+    def optimize(self, term_m, term_v, population, mut_pb, mut_eta,
                  xover_pb, xover_eta):
         """Performs the Optimisation via Master-Slave NSGA-II.
 
-        :modelfile: the xml file to read the model from
-        :generations: the number of generations to perform
+        :term_m: the termination method (see: params.get())
+        :term_v: the termination value (see: params.get())
         :population: the size of the population to use
         :mut_pb: mutation probability per genome
         :mut_eta: mutation spread (1.0: high spread; 4.0: low spread)
@@ -79,7 +79,9 @@ class NSGA2(object):
         for fit, i_pop in zip(fits, population):
             i_pop.fitness.values = fit
 
-        for gen in range(generations):
+        gen = 0
+        while not operators.termination(term_m, term_v, gen, population):
+            gen += 1
             # selection of mates
             emo.assignCrowdingDist(population)
             offspring = tools.selTournamentDCD(population, len(population))
@@ -108,11 +110,12 @@ class NSGA2(object):
         return population
 
 if __name__ == '__main__':
-    gen, pop, f_model, _, _, mut_pb,\
+    term_m, term_v, pop, f_model, _, _, mut_pb,\
         mut_eta, xover_pb, xover_eta = params.get()
 
     alg = NSGA2(f_model)
-    population = alg.optimize(gen, pop, mut_pb, mut_eta, xover_pb, xover_eta)
+    population = alg.optimize(term_m, term_v, pop, mut_pb,
+                              mut_eta, xover_pb, xover_eta)
 
     makespan, twt, flow, setup, load, wip =\
         output.get_min_metric(population)
