@@ -93,7 +93,7 @@ def termination(method, value, generation, population):
         return value < time.time()
     if method == 'makespan':
         for ind in population:
-            if value > ind.fitness.values[0]:
+            if value >= ind.fitness.values[0]:
                 return True
         return False
 

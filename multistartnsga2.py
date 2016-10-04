@@ -20,7 +20,7 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 
 # read parameters
-generations, pop_size, f_model, _, _,\
+term_m, term_v, pop_size, f_model, _, _,\
         mut_prob, mut_eta, xover_prob, xover_eta = params.get()
 
 # -- setup algorithm --
@@ -61,7 +61,9 @@ for fit, i_pop in zip(fits, population):
     i_pop.fitness.values = fit
 
 # ---  main GA loop  ---
-for _ in range(generations):
+gen = 0
+while not operators.termination(term_m, term_v, gen, population):
+    gen += 1
 
     # -- execute genetic operators --
     # selection

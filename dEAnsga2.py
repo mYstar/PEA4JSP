@@ -35,7 +35,7 @@ neighbors = set(map(cart.Get_cart_rank, neighbor_coords))
 print('rank: {}, neighbors: {}'.format(rank, neighbors))
 
 # read parameters
-generations, pop_size, f_model, migr_int, migr_size,\
+term_m, term_v, pop_size, f_model, migr_int, migr_size,\
         mut_prob, mut_eta, xover_prob, xover_eta = params.get()
 
 # -- setup algorithm --
@@ -78,7 +78,9 @@ for fit, i_pop in zip(fits, population):
 
 # ---  main GA loop  ---
 reqs = []
-for gen in range(generations):
+gen = 0
+terminate = False
+while not terminate:
 
     # -- execute genetic operators --
     # selection
@@ -152,6 +154,8 @@ for gen in range(generations):
                 len(population)-len(migrants))
             population.extend(migrants)
 
+    gen += 1
+    terminate = operators.termination(term_m, term_v, gen, population)
 
 # ---  process results ---
 

@@ -23,7 +23,7 @@ rank = comm.Get_rank()
 
 if rank == 0:
     # read parameters
-    generations, pop_size, f_model, _, _,\
+    term_m, term_v, pop_size, f_model, _, _,\
             mut_prob, mut_eta, xover_prob, xover_eta = params.get()
     pop_size *= size
 
@@ -63,6 +63,8 @@ if rank == 0:
     fits = map(lambda x:  operators.calc_fitness(x, evaluator), population)
     for fit, i_pop in zip(fits, population):
         i_pop.fitness.values = fit
+
+    gen = 0
 else:
     evaluator = None
     generations = None
@@ -70,15 +72,16 @@ else:
 
 # ---  broadcast parameters and model  ---
 evaluator = comm.bcast(evaluator, root=0)
-generations = comm.bcast(generations, root=0)
 pop_size = comm.bcast(pop_size, root=0)
 
 # ---  main GA loop  ---
 root_values = None
-for _ in range(generations):
+terminate = False
+while not terminate:
 
     # -- execute genetic operators --
     if rank == 0:
+        gen += 1
         # selection
         emo.assignCrowdingDist(population)
         offspring = tools.selTournamentDCD(population, len(population))
@@ -93,7 +96,7 @@ for _ in range(generations):
         # prepare individuals for scatter
         root_values = np.empty([pop_size, model.solution_length()])
         for i, ind in zip(range(len(offspring)), offspring):
-            root_values[i] = ind.values
+            root_values[i] = ind.get_values()
         root_values = np.reshape(
             root_values,
             (size, int(pop_size/size), model.solution_length()))
@@ -131,6 +134,12 @@ for _ in range(generations):
         population = toolbox.select(
             offspring,
             len(population))
+
+        # calculate termination criterion
+        terminate = operators.termination(term_m, term_v, gen, population)
+
+    terminate = comm.bcast(terminate, root=0)
+
 
 # ---  process results ---
 if rank == 0:
