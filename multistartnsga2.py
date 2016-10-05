@@ -103,10 +103,7 @@ if rank == 0:
     all_pop = sum(all_pop, [])
     makespan, twt, flow, setup, load, wip =\
         output.get_min_metric(all_pop)
-    print('rank: {}'.format(rank))
-    print('best makespan: {}'.format(makespan))
-    print('best twt: {}'.format(twt))
-    print('best flow: {}'.format(flow))
-    print('best setup: {}'.format(setup))
-    print('best load: {}'.format(load))
-    print('best wip: {}'.format(wip))
+
+    with open(f_out, "a") as myfile:
+        myfile.write("{:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n".format(
+            makespan, twt, flow, setup, load, wip))
