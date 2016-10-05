@@ -41,13 +41,13 @@ def get():
 
     term_value = 10
     term_method = 'generations'
-    pop = 100
+    pop = 52
     migr_i = 5
     migr_s = 5
-    mut_pb = 0.05
-    mut_eta = 1.0
+    mut_pb = 0.01
+    mut_eta = 1.5
     xover_pb = 1.0
-    xover_eta = 2.0
+    xover_eta = 5.0
     output = 'results.txt'
 
     f_model = './JSPEval/xml/example.xml'
