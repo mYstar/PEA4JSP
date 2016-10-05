@@ -3,6 +3,7 @@ to evaluate the individuals. The fitness function is evaluated in parallel by
 the Slave processors.
 """
 import random
+import time
 import numpy as np
 from mpi4py import MPI
 from deap import creator, base, tools, algorithms
@@ -22,9 +23,11 @@ size = comm.Get_size()
 rank = comm.Get_rank()
 
 if rank == 0:
+    start = time.time()
+
     # read parameters
     term_m, term_v, pop_size, f_out, f_model, _, _,\
-            mut_prob, mut_eta, xover_prob, xover_eta = params.get()
+        mut_prob, mut_eta, xover_prob, xover_eta = params.get()
     pop_size *= size
 
     # -- setup algorithm --
@@ -143,9 +146,14 @@ while not terminate:
 
 # ---  process results ---
 if rank == 0:
+    duration = time.time() - start
+
     makespan, twt, flow, setup, load, wip =\
         output.get_min_metric(population)
 
-    with open(f_out, "a") as myfile:
-        myfile.write("{:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n".format(
+    with open(f_out + '.results', 'a') as myfile:
+        myfile.write('{:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n'.format(
             makespan, twt, flow, setup, load, wip))
+
+    with open(f_out + '.time', 'a') as myfile:
+        myfile.write('{}\n'.format(duration))

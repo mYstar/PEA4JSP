@@ -3,6 +3,7 @@ to evaluate the individuals. The fitness function is evaluated in parallel by
 the Slave processors.
 """
 import random
+import time
 from deap import creator, base, tools, algorithms
 from deap110 import emo
 from JSPEval.jspsolution import JspSolution
@@ -110,6 +111,8 @@ class NSGA2(object):
         return population
 
 if __name__ == '__main__':
+    start = time.time()
+
     term_m, term_v, pop, f_out, f_model, _, _, mut_pb,\
         mut_eta, xover_pb, xover_eta = params.get()
 
@@ -117,9 +120,14 @@ if __name__ == '__main__':
     population = alg.optimize(term_m, term_v, pop, mut_pb,
                               mut_eta, xover_pb, xover_eta)
 
+    duration = time.time() - start
+
     makespan, twt, flow, setup, load, wip =\
         output.get_min_metric(population)
 
-    with open(f_out, "a") as myfile:
-        myfile.write("{:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n".format(
+    with open(f_out + '.results', 'a') as myfile:
+        myfile.write('{:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n'.format(
             makespan, twt, flow, setup, load, wip))
+
+    with open(f_out + '.time', 'a') as myfile:
+        myfile.write('{}\n'.format(duration))
