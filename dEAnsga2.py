@@ -81,9 +81,16 @@ for fit, i_pop in zip(fits, population):
 
 # ---  main GA loop  ---
 reqs = []
+term_reqs = []
+for node in range(size):
+    term_reqs.append(comm.irecv(source=node, tag=0))
+
 gen = 0
 terminate = False
+ready = True
+
 while not terminate:
+    gen += 1
 
     # -- execute genetic operators --
     # selection
@@ -157,8 +164,21 @@ while not terminate:
                 len(population)-len(migrants))
             population.extend(migrants)
 
-    gen += 1
     terminate = operators.termination(term_m, term_v, gen, population)
+
+    # send a termination signal to all others
+    # needed for makespan termination
+    if terminate:
+        print('rank: {} termination, sending signal'.format(rank))
+        for node in range(size):
+            comm.isend(True, node, tag=0)
+
+    # test for termination of others
+    _, node_term, _ = MPI.Request.testany(term_reqs)
+    if node_term:
+        print('rank: {}, termination signal received'.format(rank))
+    terminate = terminate | node_term
+
 
 # ---  process results ---
 
@@ -172,7 +192,7 @@ if rank == 0:
     duration = time.time() - start
 
     makespan, twt, flow, setup, load, wip =\
-        output.get_min_metric(population)
+        output.get_min_metric(all_pop)
 
     with open(f_out + '.results', 'a') as myfile:
         myfile.write('{:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n'.format(

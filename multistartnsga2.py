@@ -21,6 +21,8 @@ start = time.time()
 # MPI environment
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
+size = comm.Get_size()
+print(size)
 
 # read parameters
 term_m, term_v, pop_size, f_out, f_model, _, _,\
@@ -65,7 +67,12 @@ for fit, i_pop in zip(fits, population):
 
 # ---  main GA loop  ---
 gen = 0
-while not operators.termination(term_m, term_v, gen, population):
+terminate = False
+term_reqs = []
+for node in range(size):
+    term_reqs.append(comm.irecv(source=node, tag=0))
+
+while not terminate:
     gen += 1
 
     # -- execute genetic operators --
@@ -96,6 +103,22 @@ while not operators.termination(term_m, term_v, gen, population):
         offspring,
         len(population))
 
+    terminate = operators.termination(term_m, term_v, gen, population)
+
+    # send a termination signal to all others
+    # needed for makespan termination
+    if terminate:
+        print('rank: {} termination, sending signal'.format(rank))
+        for node in range(size):
+            comm.isend(True, node, tag=0)
+
+    # test for termination of others
+    _, node_term, _ = MPI.Request.testany(term_reqs)
+    if node_term:
+        print('rank: {}, termination signal received'.format(rank))
+    terminate = terminate | node_term
+
+
 # ---  process results ---
 
 # collect results
@@ -108,7 +131,7 @@ if rank == 0:
     duration = time.time() - start
 
     makespan, twt, flow, setup, load, wip =\
-        output.get_min_metric(population)
+        output.get_min_metric(all_pop)
 
     with open(f_out + '.results', 'a') as myfile:
         myfile.write('{:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n'.format(
