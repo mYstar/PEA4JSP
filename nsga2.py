@@ -111,18 +111,20 @@ class NSGA2(object):
         return population
 
 if __name__ == '__main__':
-    start = time.time()
 
-    term_m, term_v, pop, f_out, f_model, _, _, mut_pb,\
+    runs, term_m, term_v, pop, f_out, f_model, _, _, mut_pb,\
         mut_eta, xover_pb, xover_eta = params.get()
 
-    alg = NSGA2(f_model)
-    population = alg.optimize(term_m, term_v, pop, mut_pb,
-                              mut_eta, xover_pb, xover_eta)
+    for run in range(runs):
+        start = time.time()
 
-    duration = time.time() - start
+        alg = NSGA2(f_model)
+        population = alg.optimize(term_m, term_v, pop, mut_pb,
+                                  mut_eta, xover_pb, xover_eta)
 
-    output.write_pareto_front(population, f_out)
+        duration = time.time() - start
 
-    with open(f_out + '.time', 'a') as myfile:
-        myfile.write('{}\n'.format(duration))
+        output.write_pareto_front(population, '{}.{}'.format(f_out, run))
+
+        with open('{}.{}.time'.format(f_out, run), 'a') as myfile:
+            myfile.write('{}\n'.format(duration))
