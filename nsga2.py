@@ -122,12 +122,7 @@ if __name__ == '__main__':
 
     duration = time.time() - start
 
-    makespan, twt, flow, setup, load, wip =\
-        output.get_min_metric(population)
-
-    with open(f_out + '.results', 'a') as myfile:
-        myfile.write('{:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}, {:.2f}\n'.format(
-            makespan, twt, flow, setup, load, wip))
+    output.write_pareto_front(population, f_out)
 
     with open(f_out + '.time', 'a') as myfile:
         myfile.write('{}\n'.format(duration))

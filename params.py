@@ -48,7 +48,7 @@ def get():
     mut_eta = 1.5
     xover_pb = 1.0
     xover_eta = 5.0
-    output = 'results.txt'
+    output = 'experiment'
 
     f_model = './JSPEval/xml/example.xml'
     for opt, arg in options:

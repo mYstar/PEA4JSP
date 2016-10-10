@@ -22,12 +22,40 @@ def get_pareto_front(population):
     """Calculates the first pareto-front.
 
     :population: the population to process
-    :returns: a set with the individuals
+    :returns: a list with the individuals and a set with their fitness values
 
     """
     pareto_front = tools.sortNondominated(population, 500, True)
-    uniq = set()
+    fitness = set()
+    solutions = list()
+    fitness_size = 0
     for ind in pareto_front[0]:
-        uniq.add(ind.fitness.values)
+        fitness.add(ind.fitness.values)
+        # add only the first solution with the same fitness
+        if fitness_size < len(fitness):
+            solutions.append(ind.get_values())
+            fitness_size = len(fitness)
 
-    return uniq
+    return solutions, fitness
+
+
+def write_pareto_front(population, p_file):
+    """ Calculates the paretofront of the population and appends it to the
+    file.
+
+    :population: the population to process
+    :p_file: the filename to write to
+    :returns: None
+
+    """
+    solutions, fitness = get_pareto_front(population)
+
+    with open(p_file + '.fit', 'a') as myfile:
+        for solution in fitness:
+            myfile.write(', '.join(str(x) for x in solution))
+            myfile.write('\n')
+
+    with open(p_file + '.sol', 'a') as myfile:
+        for solution in solutions:
+            myfile.write(', '.join(str(x) for x in solution))
+            myfile.write('\n')
