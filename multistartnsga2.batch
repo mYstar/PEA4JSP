@@ -1,0 +1,21 @@
+#!/bin/bash
+
+CORES=4
+
+#Submit this script with: sbatch multistartnsga2.batch
+
+#SBATCH --time=0:2:00   # max walltime
+#SBATCH --ntasks="$CORES"   # number of processor cores (i.e. tasks)
+#SBATCH --partition=haswell
+#SBATCH --mem-per-cpu=2048M   # memory per CPU core
+#SBATCH -J "multistart_test"   # job name
+#SBATCH --mail-user=s9547231@tu-dresden.de   # email address
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH -A p_jobshop
+
+
+OUTFILE="/scratch/s9547231/output.txt"
+mpiexec -n "$CORES" python3 /home/s9547231/PEA4JSP/multistartnsga2.py -o /scratch/s9547231/test > "$OUTFILE"
+
+exit 0
