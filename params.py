@@ -6,7 +6,6 @@ import math
 
 def get():
     """Parses the commandline parameters for:
-        - number of runs
         - termination method
         - termination value
         - population size
@@ -20,27 +19,26 @@ def get():
         - output file
         - modelfile
 
-    :returns: a tuple (runs, term_meth, term_val, pop, outputfile, modelfile,
+    :returns: a tuple (term_meth, term_val, pop, outputfile, modelfile,
             mig_int, mig_size, mut_prob, mut_eta, xover_prob, xover_eta)
     """
     usage_string = "usage: python3 <algorithm>.py --term-method\
 <generations|time|makespan> -t <term_value> -p <population per core>\
 --mi <migration intervall> --ms <migration size> --mp <mutation probability>\
 --me <mutation eta>\ xp <crossover probability> --xe <crossover eta>\
--o <outputfile> -r <runs> <modelfile>"
+-o <outputfile> <modelfile>"
 
     # read the given parameters
     try:
         options, files = getopt.getopt(
                 sys.argv[1:],
-                "ht:p:o:r:",
+                "ht:p:o:",
                 ["help", "population=", "mi=", "ms=", "mp=", "output",
-                 "me=", "xp=", "xe=", "term-method=", "term-value=", "runs="])
+                 "me=", "xp=", "xe=", "term-method=", "term-value="])
     except getopt.GetoptError:
         print(usage_string)
         sys.exit(1)
 
-    runs = 1
     term_value = 10
     term_method = 'generations'
     pop = 52
@@ -61,8 +59,6 @@ def get():
             term_value = float(arg)
         elif opt in ('-o', '--output'):
             output = arg
-        elif opt in ('-r', '--runs'):
-            runs = int(arg)
         elif opt in ('--term-method'):
             term_method = arg
             if term_method not in ('generations', 'time', 'makespan'):
@@ -113,7 +109,7 @@ for the selection to work.')
     print('crossover prob: {}\ncrossover eta: {}'
           .format(xover_pb, xover_eta))
 
-    return (runs, term_method, term_value, pop, output, f_model, migr_i,
+    return (term_method, term_value, pop, output, f_model, migr_i,
             migr_s, mut_pb, mut_eta, xover_pb, xover_eta)
 
 

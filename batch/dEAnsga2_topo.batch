@@ -1,0 +1,38 @@
+#!/bin/bash
+#Submit this script with: sbatch dEAnsga2_topo.batch <mig interval> <mig size>
+
+# parameters
+INDEX=$1
+INTERVAL=$2
+MSIZE=$3
+FOLDER="/scratch/s9547231/dea/topo"
+mkdir -p $FOLDER
+
+OUTFILE="$FOLDER/output.txt"
+ERRFILE="$FOLDER/error.txt"
+touch "$OUTFILE"
+touch "$ERRFILE"
+
+#SBATCH --time=0:2:00   # max walltime
+#SBATCH --ntasks=9 # number of processor cores (i.e. tasks)
+#SBATCH --partition=haswell
+#SBATCH --mem-per-cpu=2048M   # memory per CPU core
+#SBATCH -J "dEA: topology test"   # job name
+#SBATCH --mail-user=s9547231@tu-dresden.de   # email address
+#SBATCH --mail-type=END
+#SBATCH --mail-type=FAIL
+#SBATCH -A p_jobshop
+
+
+DEA='/home/s9547231/PEA4JSP/dEAnsga2.py'
+MODEL='/home/s9547231/data/generated/100operations.xml'
+srun python "$DEA" \
+  --mi "${INTERVAL}" \
+  --ms "${MSIZE}" \
+  --term-method time \
+  -t 1 \
+  -o "${FOLDER}/i${INTERVAL}_s${MSIZE}.${INDEX}" \
+  "$MODEL" \
+  >> "$OUTFILE" 2>> "$ERRFILE"
+
+exit 0

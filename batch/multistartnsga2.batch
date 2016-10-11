@@ -1,0 +1,8 @@
+#!/bin/bash
+
+
+OUTFILE="/scratch/s9547231/output.txt"
+ERRFILE="/scratch/s9547231/error.txt"
+srun python /home/s9547231/PEA4JSP/multistartnsga2.py -o /scratch/s9547231/multi/test /home/s9547231/JSPEval/xml/example.xml > "$OUTFILE" 2> "$ERRFILE"
+
+exit 0
