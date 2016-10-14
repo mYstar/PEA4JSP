@@ -3,6 +3,9 @@ JSPEval
 # results from test runs
 results
 
+# corrupt file
+batch/all_topo.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

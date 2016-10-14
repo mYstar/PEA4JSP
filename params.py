@@ -41,7 +41,7 @@ def get():
 
     term_value = 10
     term_method = 'generations'
-    pop = 52
+    pop = 100
     migr_i = 5
     migr_s = 5
     mut_pb = 0.01

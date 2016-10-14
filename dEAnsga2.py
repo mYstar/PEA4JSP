@@ -185,15 +185,30 @@ while not terminate:
 # ---  process results ---
 
 # collect results
-all_pop = comm.gather(population, root=0)
+sol_values = np.empty([pop_size, model.solution_length()])
+fit_values = np.empty([pop_size, fitness_size])
+for i, ind in zip(range(pop_size), population):
+    sol_values[i] = ind.get_values()
+    fit_values[i] = ind.fitness.values
 
-# output
+sol_all = None
+fit_all = None
 if rank == 0:
-    all_pop = sum(all_pop, [])
+    sol_all = np.empty([pop_size * size, model.solution_length()])
+    fit_all = np.empty([pop_size * size, fitness_size])
+
+comm.Gather(sol_values, sol_all, root=0)
+comm.Gather(fit_values, fit_all, root=0)
+
+if rank == 0:
+    all_pop = toolbox.population(n=pop_size * size)
+    for i, ind in zip(range(pop_size * size), all_pop):
+        ind.set_values(sol_all[i])
+        ind.fitness.values = fit_all[i]
 
     duration = time.time() - start
 
-    output.write_pareto_front(population, f_out)
+    output.write_pareto_front(all_pop, f_out)
 
     with open('{}.time'.format(f_out), 'a') as myfile:
         myfile.write('{}\n'.format(duration))

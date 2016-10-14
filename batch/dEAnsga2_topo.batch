@@ -1,18 +1,6 @@
 #!/bin/bash
 #Submit this script with: sbatch dEAnsga2_topo.batch <mig interval> <mig size>
 
-# parameters
-INDEX=$1
-INTERVAL=$2
-MSIZE=$3
-FOLDER="/scratch/s9547231/dea/topo"
-mkdir -p $FOLDER
-
-OUTFILE="$FOLDER/output.txt"
-ERRFILE="$FOLDER/error.txt"
-touch "$OUTFILE"
-touch "$ERRFILE"
-
 #SBATCH --time=0:2:00   # max walltime
 #SBATCH --ntasks=9 # number of processor cores (i.e. tasks)
 #SBATCH --partition=haswell
@@ -22,6 +10,20 @@ touch "$ERRFILE"
 #SBATCH --mail-type=END
 #SBATCH --mail-type=FAIL
 #SBATCH -A p_jobshop
+
+# parameters
+INDEX=$1
+INTERVAL=$2
+MSIZE=$3
+FOLDER="/scratch/s9547231/dea/topo"
+mkdir -p $FOLDER
+mkdir -p "${FOLDER}/out/"
+mkdir -p "${FOLDER}/err/"
+
+OUTFILE="$FOLDER/out/i${INTERVAL}_s${MSIZE}.${INDEX}.txt"
+ERRFILE="$FOLDER/err/i${INTERVAL}_s${MSIZE}.${INDEX}.txt"
+touch "$OUTFILE"
+touch "$ERRFILE"
 
 
 DEA='/home/s9547231/PEA4JSP/dEAnsga2.py'

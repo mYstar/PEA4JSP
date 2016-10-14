@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-#Submit this script with: sbatch multistartnsga2.batch
+#Submit this script with: sbatch dEAnsga2.batch
 
 #SBATCH --time=0:2:00   # max walltime
 #SBATCH --ntasks=4 # number of processor cores (i.e. tasks)
