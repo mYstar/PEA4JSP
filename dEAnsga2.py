@@ -86,6 +86,7 @@ for node in range(size):
     term_reqs.append(comm.irecv(source=node, tag=0))
 
 gen = 0
+next_migr = migr_int
 terminate = False
 ready = True
 
@@ -119,8 +120,9 @@ while not terminate:
     # --- migration ---
 
     # migrate own solutions
-    if gen % migr_int == 0:
-        print('rank: {}, gen: {}, solutions sent'.format(rank, gen))
+    if gen >= next_migr and ready:
+        print('rank: {}, gen: {}, migr int: {} | solutions sent'.format(
+            rank, gen, next_migr/migr_int))
         # select solutions for migration
         migrants = toolbox.select(population, migr_size)
         # prepare values and fitness for sending
@@ -132,16 +134,17 @@ while not terminate:
                                     list(ind.fitness.values))
 
         # send best solutions to neighbors
-        for req in reqs:  # close old requests if they are not ready
-            req.Free()
         reqs = []
         sol_recv = np.empty(
             [len(neighbors), migr_size, solution_length + fitness_size],
             dtype=np.float32)
         for i, nb in zip(range(len(neighbors)), neighbors):
-            cart.Isend(sol_send, nb, tag=gen)
-            reqs.append(cart.Irecv(sol_recv[i], source=nb, tag=gen))
+            cart.Isend(sol_send, nb, tag=next_migr/migr_int)
+            reqs.append(cart.Irecv(
+                sol_recv[i], source=nb, tag=next_migr/migr_int))
+
         ready = False
+        next_migr += migr_int
 
     # receive migrants
     if not ready:
